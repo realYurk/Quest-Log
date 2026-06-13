@@ -1,0 +1,13 @@
+node_modules
+
+# Electron build output
+dist/
+dist-electron/
+dist-electron-new/
+
+# Electron builder artifacts
+*.exe
+*.blockmap
+builder-debug.yml
+latest.yml
+builder-effective-config.yaml
