@@ -77,12 +77,12 @@
 ![技能图谱](pictures/pic1.png)
 
 ### 技能详情与阶段管理
-![技能详情](pictures/pic2.png)
-
-### 每日挑战与成就系统
 ![成就系统](pictures/pic3.png)
 
 ### SOP 任务手册
+![技能详情](pictures/pic2.png)
+
+### 每日挑战与成就系统
 ![任务手册](pictures/pic4.png)
 
 ### 暗色主题界面
