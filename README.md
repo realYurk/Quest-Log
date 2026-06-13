@@ -12,8 +12,6 @@
 
 </div>
 
-![暗色主题](pictures/pic-blk-1.png)
-
 ---
 
 ## 🎯 它是什么
@@ -88,6 +86,7 @@
 ![任务手册](pictures/pic4.png)
 
 ### 暗色主题界面
+![暗色主题](pictures/pic-blk-1.png)
 ![暗色主题](pictures/pic-blk-2.png)
 
 </div>
