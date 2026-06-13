@@ -7,6 +7,22 @@
         <span class="toolbar-subtitle">{{ store.inProgressSkills.length }}个技能进行中</span>
       </div>
       <div class="toolbar-right">
+        <button
+          class="btn-toolbar btn-toolbar--secondary"
+          :class="{ 'btn-toolbar--active': allCollapsed }"
+          @click="toggleExpandAll"
+          :title="allCollapsed ? '展开全部技能' : '收起全部技能'"
+        >
+          <span class="btn-icon">{{ allCollapsed ? '🔽' : '🔼' }}</span>
+          <span>{{ allCollapsed ? '展开全部' : '收起全部' }}</span>
+        </button>
+        <div class="toolbar-divider"></div>
+        <label class="toggle-switch" title="隐藏已完成阶段">
+          <input type="checkbox" v-model="hideCompletedStages" />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">隐藏已完成</span>
+        </label>
+        <div class="toolbar-divider"></div>
         <button class="btn-toolbar btn-toolbar--secondary" @click="handleExport" title="导出技能树">
           <span class="btn-icon">📤</span>
           <span>导出</span>
@@ -15,8 +31,8 @@
           <span class="btn-icon">📥</span>
           <span>导入</span>
         </button>
-        <button class="btn-toolbar" @click="showNewSkillModal = true" title="新建技能">
-          <span class="btn-icon">➕</span>
+        <button class="btn-toolbar btn-toolbar--primary" @click="showNewSkillModal = true" title="新建技能">
+          <span class="btn-icon">✨</span>
           <span>新建技能</span>
         </button>
       </div>
@@ -31,7 +47,6 @@
       @mousemove="doPan"
       @mouseup="endPan"
       @mouseleave="endPan"
-      @wheel.prevent="handleWheel"
     >
       <!-- SVG连接线层 -->
       <svg v-if="store.skillTrees.length > 0" class="skill-tree-view__svg">
@@ -85,7 +100,7 @@
               :skill="skill"
               :is-expanded="store.isExpanded(skill.id)"
               @click="handleSkillClick"
-              @toggle-expand="store.toggleExpand"
+              @toggle-expand="handleSkillToggle"
               @edit="openEditSkill"
               @delete="confirmDeleteSkill"
             />
@@ -95,7 +110,7 @@
           <Transition name="stages-expand">
             <div v-if="store.isExpanded(skill.id)" class="skill-tree-view__stages">
               <div
-                v-for="stage in skill.stages"
+                v-for="stage in (hideCompletedStages ? skill.stages.filter(s => s.status !== 'completed') : skill.stages)"
                 :key="stage.id + '-' + store.refreshKey"
                 class="skill-tree-view__stage-item"
               >
@@ -125,19 +140,27 @@
 
     <!-- 底部统计栏 -->
     <div class="skill-tree-view__footer">
-      <div class="footer-stat">
-        <span class="stat-value">{{ store.skillTrees.length }}</span>
-        <span class="stat-label">总技能</span>
+      <div class="footer-left">
+        <!-- 占位，保持布局 -->
       </div>
-      <div class="footer-divider"></div>
-      <div class="footer-stat">
-        <span class="stat-value">{{ store.completedStagesCount }}</span>
-        <span class="stat-label">已完成</span>
+      <div class="footer-center">
+        <div class="footer-stat">
+          <span class="stat-value">{{ store.skillTrees.length }}</span>
+          <span class="stat-label">总技能</span>
+        </div>
+        <div class="footer-divider"></div>
+        <div class="footer-stat">
+          <span class="stat-value">{{ store.completedStagesCount }}</span>
+          <span class="stat-label">已完成</span>
+        </div>
+        <div class="footer-divider"></div>
+        <div class="footer-stat">
+          <span class="stat-value">{{ totalInProgress }}</span>
+          <span class="stat-label">进行中</span>
+        </div>
       </div>
-      <div class="footer-divider"></div>
-      <div class="footer-stat">
-        <span class="stat-value">{{ totalInProgress }}</span>
-        <span class="stat-label">进行中</span>
+      <div class="footer-right">
+        <!-- 占位，保持布局 -->
       </div>
     </div>
 
@@ -210,6 +233,31 @@ const scrollStart = ref({ x: 0, y: 0 })
 const scrollLeft = ref(0)
 const scrollTop = ref(0)
 
+// 隐藏已完成阶段开关
+const hideCompletedStages = ref(false)
+
+// 全部展开/收起状态
+const allCollapsed = computed(() => {
+  if (store.skillTrees.length === 0) return true
+  return store.skillTrees.some(skill => !store.isExpanded(skill.id))
+})
+
+function toggleExpandAll() {
+  if (allCollapsed.value) {
+    // 展开全部
+    store.skillTrees.forEach(skill => {
+      if (skill.stages.length > 0) {
+        store.expandSkill(skill.id)
+      }
+    })
+  } else {
+    // 收起全部
+    store.skillTrees.forEach(skill => {
+      store.collapseSkill(skill.id)
+    })
+  }
+}
+
 async function updateConnections() {
   // Wait for Vue to finish rendering DOM updates
   await nextTick()
@@ -248,14 +296,6 @@ function endPan() {
   if (canvasRef.value) {
     canvasRef.value.style.cursor = ''
   }
-}
-
-function handleWheel(e: WheelEvent) {
-  const canvas = canvasRef.value
-  if (!canvas) return
-  // Store scroll position before wheel
-  scrollLeft.value = canvas.scrollLeft
-  scrollTop.value = canvas.scrollTop
 }
 
 // Modal状态
@@ -388,7 +428,21 @@ onMounted(() => {
 function handleSkillClick(skill: SkillNode) {
   store.setActiveSkill(skill.id)
   if (skill.stages.length > 0) {
-    store.toggleExpand(skill.id)
+    // 直接切换展开状态，不依赖于 setActiveSkill 中的 expandSkill
+    if (store.isExpanded(skill.id)) {
+      store.collapseSkill(skill.id)
+    } else {
+      store.expandSkill(skill.id)
+    }
+  }
+}
+
+// 处理展开/收起指示器点击
+function handleSkillToggle(skillId: string) {
+  if (store.isExpanded(skillId)) {
+    store.collapseSkill(skillId)
+  } else {
+    store.expandSkill(skillId)
   }
 }
 
@@ -769,42 +823,60 @@ async function handleImport() {
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
 .btn-toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary);
-  color: white;
-  font-size: 13px;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-def);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
 }
 
 .btn-toolbar:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+  background: var(--bg-hover);
+  border-color: var(--primary);
+  color: var(--text-primary);
 }
 
 .btn-toolbar:active {
   transform: scale(0.97);
 }
 
+.btn-toolbar--primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+  color: white;
+  border: 1px solid var(--primary);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  font-weight: 600;
+}
+
+.btn-toolbar--primary:hover {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, #4338ca 100%);
+  border-color: var(--primary-hover);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+}
+
 .btn-toolbar--secondary {
   background: var(--bg-raised);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   border: 1px solid var(--border-def);
 }
 
 .btn-toolbar--secondary:hover {
   background: var(--bg-hover);
   border-color: var(--primary);
+  color: var(--text-primary);
 }
 
 .btn-toolbar--active {
@@ -813,8 +885,81 @@ async function handleImport() {
   color: var(--primary) !important;
 }
 
+.btn-toolbar--icon {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
 .btn-icon {
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-def);
+  margin: 0 3px;
+}
+
+/* 切换开关样式 */
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-def);
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.toggle-switch:hover {
+  border-color: var(--primary);
+  background: var(--bg-hover);
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  background: var(--bg-panel);
+  border-radius: 8px;
+  transition: all 200ms ease;
+  border: 1px solid var(--border-def);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: all 200ms ease;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(12px);
+  background: white;
+}
+
+.toggle-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 /* 画布 */
@@ -991,12 +1136,60 @@ async function handleImport() {
 .skill-tree-view__footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 32px;
-  padding: 12px 24px;
+  justify-content: space-between;
+  padding: 10px 24px;
   background: var(--bg-base);
   border-top: 1px solid var(--border-sub);
   flex-shrink: 0;
+}
+
+.footer-left,
+.footer-right {
+  width: 140px;
+}
+
+.footer-center {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-def);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.footer-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.footer-btn--primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.footer-btn--primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: white;
+}
+
+.footer-btn-icon {
+  font-size: 13px;
 }
 
 .footer-stat {

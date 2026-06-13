@@ -182,9 +182,18 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   // ── Achievement operations ────────────────────────────────────────────────
-  function checkAndUnlockAchievement(achievementId: string) {
-    // Already unlocked?
-    if (profile.value.achievements.some(a => a.id === achievementId && a.unlockedAt)) {
+  function checkAndUnlockAchievement(achievementId: string, opts?: { skipModal?: boolean }) {
+    const skipModal = opts?.skipModal ?? false
+    const existing = profile.value.achievements.find(a => a.id === achievementId)
+
+    // 已弹窗展示过的，直接跳过（不弹窗也不更新任何状态）
+    if (existing?.shownAt) {
+      return false
+    }
+
+    // 已解锁但未弹窗展示过的（仅设置 shownAt，不重复弹窗）
+    if (existing?.unlockedAt) {
+      existing.shownAt = Date.now()
       return false
     }
 
@@ -193,23 +202,23 @@ export const useGamificationStore = defineStore('gamification', () => {
 
     const achievement: Achievement = {
       ...def,
-      unlockedAt: Date.now()
+      unlockedAt: Date.now(),
+      shownAt: Date.now()
     }
 
     profile.value.achievements.push(achievement)
     newAchievement.value = achievement
-    showAchievementModal.value = true
-    toast(`🏅 成就解锁: ${def.title}`, 'achievement')
+    if (!skipModal) {
+      showAchievementModal.value = true
+      toast(`🏅 成就解锁: ${def.title}`, 'achievement')
+    }
 
     return true
   }
 
   // 手动解锁指定成就（用于阶段奖励关联）
   function unlockAchievement(achievementId: string) {
-    const result = checkAndUnlockAchievement(achievementId)
-    if (!result) {
-      // 如果已解锁，静默失败，不重复弹出提示
-    }
+    checkAndUnlockAchievement(achievementId)
   }
 
   function checkAchievements(stats: {
@@ -222,7 +231,8 @@ export const useGamificationStore = defineStore('gamification', () => {
     streakDays?: number
     skillsUnlocked?: number
     sopLinkCount?: number
-  }) {
+  }, opts?: { skipModal?: boolean }) {
+    const skipModal = opts?.skipModal ?? false
     const cards = stats.totalCardsCompleted ?? 0
     const sops = stats.totalSopsCompleted ?? 0
     const stages = stats.totalStagesCompleted ?? 0
@@ -234,62 +244,62 @@ export const useGamificationStore = defineStore('gamification', () => {
     const sopLinks = stats.sopLinkCount ?? 0
 
     // 卡片成就
-    if (cards >= 1) checkAndUnlockAchievement('first_card')
-    if (cards >= 5) checkAndUnlockAchievement('cards_5')
-    if (cards >= 10) checkAndUnlockAchievement('cards_10')
-    if (cards >= 25) checkAndUnlockAchievement('cards_25')
-    if (cards >= 50) checkAndUnlockAchievement('cards_50')
-    if (cards >= 100) checkAndUnlockAchievement('cards_100')
-    if (cards >= 250) checkAndUnlockAchievement('cards_250')
-    if (cards >= 500) checkAndUnlockAchievement('cards_500')
-    if (cards >= 1000) checkAndUnlockAchievement('cards_1000')
+    if (cards >= 1) checkAndUnlockAchievement('first_card', { skipModal })
+    if (cards >= 5) checkAndUnlockAchievement('cards_5', { skipModal })
+    if (cards >= 10) checkAndUnlockAchievement('cards_10', { skipModal })
+    if (cards >= 25) checkAndUnlockAchievement('cards_25', { skipModal })
+    if (cards >= 50) checkAndUnlockAchievement('cards_50', { skipModal })
+    if (cards >= 100) checkAndUnlockAchievement('cards_100', { skipModal })
+    if (cards >= 250) checkAndUnlockAchievement('cards_250', { skipModal })
+    if (cards >= 500) checkAndUnlockAchievement('cards_500', { skipModal })
+    if (cards >= 1000) checkAndUnlockAchievement('cards_1000', { skipModal })
 
     // 阶段成就
-    if (stages >= 1) checkAndUnlockAchievement('first_stage')
-    if (stages >= 3) checkAndUnlockAchievement('stages_3')
-    if (stages >= 10) checkAndUnlockAchievement('stages_10')
-    if (stages >= 25) checkAndUnlockAchievement('stages_25')
-    if (stages >= 50) checkAndUnlockAchievement('stages_50')
+    if (stages >= 1) checkAndUnlockAchievement('first_stage', { skipModal })
+    if (stages >= 3) checkAndUnlockAchievement('stages_3', { skipModal })
+    if (stages >= 10) checkAndUnlockAchievement('stages_10', { skipModal })
+    if (stages >= 25) checkAndUnlockAchievement('stages_25', { skipModal })
+    if (stages >= 50) checkAndUnlockAchievement('stages_50', { skipModal })
 
     // 技能成就
-    if (skills >= 1) checkAndUnlockAchievement('first_skill')
-    if (unlocked >= 1) checkAndUnlockAchievement('skill_unlocked')
-    if (count >= 3) checkAndUnlockAchievement('skills_3')
-    if (count >= 5) checkAndUnlockAchievement('skills_5')
-    if (count >= 10) checkAndUnlockAchievement('skills_10')
-    if (count >= 20) checkAndUnlockAchievement('skills_20')
+    if (skills >= 1) checkAndUnlockAchievement('first_skill', { skipModal })
+    if (unlocked >= 1) checkAndUnlockAchievement('skill_unlocked', { skipModal })
+    if (count >= 3) checkAndUnlockAchievement('skills_3', { skipModal })
+    if (count >= 5) checkAndUnlockAchievement('skills_5', { skipModal })
+    if (count >= 10) checkAndUnlockAchievement('skills_10', { skipModal })
+    if (count >= 20) checkAndUnlockAchievement('skills_20', { skipModal })
 
     // SOP 成就
-    if (sops >= 1) checkAndUnlockAchievement('first_sop')
-    if (sops >= 3) checkAndUnlockAchievement('sops_3')
-    if (sops >= 10) checkAndUnlockAchievement('sops_10')
+    if (sops >= 1) checkAndUnlockAchievement('first_sop', { skipModal })
+    if (sops >= 3) checkAndUnlockAchievement('sops_3', { skipModal })
+    if (sops >= 10) checkAndUnlockAchievement('sops_10', { skipModal })
 
     // SOP 绑定成就（仅与绑定SOP到技能阶段的数量相关）
-    if (sopLinks >= 1) checkAndUnlockAchievement('sop_link_1')
-    if (sopLinks >= 2) checkAndUnlockAchievement('sop_link_2')
-    if (sopLinks >= 3) checkAndUnlockAchievement('sop_link_3')
-    if (sopLinks >= 5) checkAndUnlockAchievement('sop_link_5')
-    if (sopLinks >= 10) checkAndUnlockAchievement('sop_link_10')
+    if (sopLinks >= 1) checkAndUnlockAchievement('sop_link_1', { skipModal })
+    if (sopLinks >= 2) checkAndUnlockAchievement('sop_link_2', { skipModal })
+    if (sopLinks >= 3) checkAndUnlockAchievement('sop_link_3', { skipModal })
+    if (sopLinks >= 5) checkAndUnlockAchievement('sop_link_5', { skipModal })
+    if (sopLinks >= 10) checkAndUnlockAchievement('sop_link_10', { skipModal })
 
     // 连续成就
-    if (streak >= 3) checkAndUnlockAchievement('streak_3')
-    if (streak >= 7) checkAndUnlockAchievement('streak_7')
-    if (streak >= 14) checkAndUnlockAchievement('streak_14')
-    if (streak >= 30) checkAndUnlockAchievement('streak_30')
-    if (streak >= 60) checkAndUnlockAchievement('streak_60')
-    if (streak >= 100) checkAndUnlockAchievement('streak_100')
+    if (streak >= 3) checkAndUnlockAchievement('streak_3', { skipModal })
+    if (streak >= 7) checkAndUnlockAchievement('streak_7', { skipModal })
+    if (streak >= 14) checkAndUnlockAchievement('streak_14', { skipModal })
+    if (streak >= 30) checkAndUnlockAchievement('streak_30', { skipModal })
+    if (streak >= 60) checkAndUnlockAchievement('streak_60', { skipModal })
+    if (streak >= 100) checkAndUnlockAchievement('streak_100', { skipModal })
 
     // Collection 成就
-    if (collections >= 1) checkAndUnlockAchievement('first_collection')
-    if (collections >= 3) checkAndUnlockAchievement('collections_3')
+    if (collections >= 1) checkAndUnlockAchievement('first_collection', { skipModal })
+    if (collections >= 3) checkAndUnlockAchievement('collections_3', { skipModal })
 
     // 时间类成就
     const hour = new Date().getHours()
-    if (hour < 8) checkAndUnlockAchievement('early_bird')
-    if (hour >= 0 && hour < 5) checkAndUnlockAchievement('night_owl')
+    if (hour < 8) checkAndUnlockAchievement('early_bird', { skipModal })
+    if (hour >= 0 && hour < 5) checkAndUnlockAchievement('night_owl', { skipModal })
 
     // 闪电侠：一天内完成10个卡片（通过单次调用 cards >= 10 配合「今天」判断）
-    if (cards >= 10) checkAndUnlockAchievement('speed_runner')
+    if (cards >= 10) checkAndUnlockAchievement('speed_runner', { skipModal })
   }
 
   // ── Daily challenges operations ────────────────────────────────────────────
@@ -398,7 +408,7 @@ export const useGamificationStore = defineStore('gamification', () => {
       skillCount,
       streakDays,
       skillsUnlocked
-    })
+    }, { skipModal: true })
   }
 
   function getProfile(): PlayerProfile {

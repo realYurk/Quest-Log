@@ -261,6 +261,8 @@ function goToNewSkill() {
   gap: 12px;
   padding: 16px 12px;
   overflow-y: auto;
+  overflow-x: clip;
+  position: relative;
 }
 
 /* 角色面板 */
@@ -507,6 +509,7 @@ function goToNewSkill() {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+  overflow: visible;
 }
 
 .achievement-badge {
@@ -521,6 +524,14 @@ function goToNewSkill() {
   cursor: pointer;
   transition: all 200ms ease;
   position: relative;
+}
+
+/* 左边缘的徽章，tooltip 向下偏移避免被边缘遮挡 */
+.achievement-badge:nth-child(4n + 1) .badge-tooltip {
+  left: calc(100% + 8px);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
 }
 
 .achievement-badge.unlocked {

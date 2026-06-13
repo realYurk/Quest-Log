@@ -78,6 +78,7 @@ export interface Achievement {
   icon: string
   rarity: AchievementRarity
   unlockedAt?: number
+  shownAt?: number  // 记录何时弹窗展示过，避免重启后重复弹窗
 }
 
 export interface DailyChallenge {

@@ -483,6 +483,9 @@ export const useSkillTreeStore = defineStore('skillTree', () => {
     // 强制触发响应式更新
     refreshKey.value++
     skillTrees.value = [...skillTrees.value]
+
+    // 持久化保存数据（确保退出后状态不丢失）
+    saveData()
   }
 
   // 根据里程碑完成情况更新阶段状态
@@ -562,6 +565,9 @@ export const useSkillTreeStore = defineStore('skillTree', () => {
     // 强制触发响应式更新
     refreshKey.value++
     skillTrees.value = [...skillTrees.value]
+
+    // 持久化保存数据（确保退出后状态不丢失）
+    saveData()
   }
 
   function unlockNextStage(skill: SkillNode, completedOrder: number) {
@@ -794,17 +800,14 @@ export const useSkillTreeStore = defineStore('skillTree', () => {
     const data = toRaw(skillTrees.value)
     try {
       if (window.electronAPI) {
-        // 重要：先等待 SOP store 的保存完成，避免数据被覆盖
-        const sopStore = useSopStore()
-        await sopStore.waitForSave()
-        // 获取当前完整数据，合并技能树后保存
-        const fullData = await window.electronAPI.loadData()
-        fullData.skillTrees = data
-        fullData.lastModified = Date.now()
+        // 重要：每次保存前都从磁盘读取最新数据，避免覆盖其他 store 的改动
+        const freshData = await window.electronAPI.loadData()
+        freshData.skillTrees = data
+        freshData.lastModified = Date.now()
         // 保存展开状态
-        fullData.expandedSkillIds = Array.from(expandedSkillIds.value)
-        fullData.autoCollapseCompleted = autoCollapseCompleted.value
-        await window.electronAPI.saveData(fullData)
+        freshData.expandedSkillIds = Array.from(expandedSkillIds.value)
+        freshData.autoCollapseCompleted = autoCollapseCompleted.value
+        await window.electronAPI.saveData(freshData)
       } else {
         // Web 环境：使用 localStorage
         const raw = localStorage.getItem('questlog-data')
@@ -853,7 +856,7 @@ export const useSkillTreeStore = defineStore('skillTree', () => {
             if (typeof appData.autoCollapseCompleted === 'boolean') {
               autoCollapseCompleted.value = appData.autoCollapseCompleted
             }
-            return
+            return // 重要：防止继续执行覆盖已加载的数据
           }
         }
         skillTrees.value = createDefaultSkillTree()

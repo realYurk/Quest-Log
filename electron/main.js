@@ -29,12 +29,38 @@ function ensureDataDir() {
 function loadData() {
   ensureDataDir()
   const f = getDataFile()
-  if (!fs.existsSync(f)) fs.writeFileSync(f, JSON.stringify(require('./seed.js'), null, 2), 'utf-8')
-  return JSON.parse(fs.readFileSync(f, 'utf-8'))
+  if (!fs.existsSync(f)) {
+    fs.writeFileSync(f, JSON.stringify(require('./seed.js'), null, 2), 'utf-8')
+    return JSON.parse(fs.readFileSync(f, 'utf-8'))
+  }
+  try {
+    return JSON.parse(fs.readFileSync(f, 'utf-8'))
+  } catch (e) {
+    // 文件损坏（可能被 Ctrl+C 等中断损坏），尝试从临时文件恢复
+    const tmp = f + '.tmp'
+    if (fs.existsSync(tmp)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(tmp, 'utf-8'))
+        console.error('[questlog] Recovered corrupted data from tmp file')
+        return data
+      } catch (e2) {
+        console.error('[questlog] tmp file also corrupted, using seed data')
+      }
+    }
+    // 备份损坏的文件，重新创建
+    const backup = f + '.bak.' + Date.now()
+    fs.renameSync(f, backup)
+    fs.writeFileSync(f, JSON.stringify(require('./seed.js'), null, 2), 'utf-8')
+    return JSON.parse(fs.readFileSync(f, 'utf-8'))
+  }
 }
 function saveData(d) {
   ensureDataDir()
-  fs.writeFileSync(getDataFile(), JSON.stringify(d, null, 2), 'utf-8')
+  const target = getDataFile()
+  // 原子写入：先写临时文件，再 rename（防止 Ctrl+C 等中断导致文件损坏）
+  const tmp = target + '.tmp'
+  fs.writeFileSync(tmp, JSON.stringify(d, null, 2), 'utf-8')
+  fs.renameSync(tmp, target)
 }
 
 // ── Window ────────────────────────────────────────────────────────────────────

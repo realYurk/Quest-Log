@@ -79,21 +79,9 @@
           <!-- SOP关联 -->
           <div v-if="!isViewMode" class="section">
             <label class="section-label">📚 SOP记录（可选）</label>
-            <div class="sop-options">
-              <label class="checkbox-option">
-                <input type="checkbox" v-model="linkExistingSop" />
-                <span class="checkbox-label">关联已有SOP</span>
-              </label>
-              <label class="checkbox-option">
-                <input type="checkbox" v-model="createNewSop" />
-                <span class="checkbox-label">创建新SOP</span>
-              </label>
-            </div>
-
-            <!-- 关联已有SOP -->
-            <div v-if="linkExistingSop" class="sop-selector">
+            <div class="sop-selector">
               <select v-model="selectedSopId" class="sop-select">
-                <option value="">选择SOP...</option>
+                <option value="">选择关联的SOP...</option>
                 <option v-for="sop in allSops" :key="sop.id" :value="sop.id">
                   {{ sop.path }} / {{ sop.title }}
                 </option>
@@ -175,8 +163,6 @@ const sopStore = useSopStore()
 const gamificationStore = useGamificationStore()
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const evidence = ref<Evidence[]>([...((props.stage?.evidence as Evidence[]) || [])])
-const linkExistingSop = ref(false)
-const createNewSop = ref(false)
 const selectedSopId = ref('')
 const showAchievement = ref(false)
 const previewingItem = ref<Evidence | null>(null)
@@ -278,7 +264,7 @@ function getConfettiStyle(index: number) {
 }
 
 async function handleConfirm() {
-  const sopId = linkExistingSop.value ? selectedSopId.value : undefined
+  const sopId = selectedSopId.value || undefined
   emit('confirm', evidence.value, sopId)
   // 父组件处理完成后会调用 closeAchievementModal 关闭此弹窗
   // 等待一小段时间让父组件处理完成再关闭
@@ -289,7 +275,6 @@ onMounted(() => {
   // 如果阶段已有SOP关联，自动选择
   if (props.stage?.sopId) {
     selectedSopId.value = props.stage.sopId
-    linkExistingSop.value = true
   }
   // 如果传入了初始预览项，自动打开预览
   if (props.initialPreviewItem) {

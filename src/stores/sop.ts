@@ -268,13 +268,16 @@ export const useSopStore = defineStore('sop', () => {
         const gStore = useGamificationStore()
         const profile = gStore.getProfile()
 
-        if (window.electronAPI && fullData && typeof fullData === 'object') {
-          // 更新整个data到fullData（但保留skillTrees由SkillTree store单独保存）
-          fullData.collections = data.value.collections
-          fullData.lastModified = Date.now()
-          fullData.profile = profile
+        if (window.electronAPI) {
+          // 每次保存前都从磁盘读取最新数据，避免覆盖其他 store 的改动
+          const freshData = await window.electronAPI.loadData()
+          freshData.collections = data.value.collections
+          freshData.lastModified = Date.now()
+          freshData.profile = profile
+          // 保留已有的 skillTrees 数据（skillTree store 独立管理自己的数据）
+          // 不再从 data.value.skillTrees 获取（那是空的），而是保持磁盘上已有的 skillTrees
           // toRaw() strips Vue Proxy - REQUIRED before IPC
-          await window.electronAPI.saveData(toRaw(fullData))
+          await window.electronAPI.saveData(toRaw(freshData))
         } else {
           const appData: LifeAppData = {
             version: '2.1',

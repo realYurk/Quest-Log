@@ -57,7 +57,15 @@
     </div>
 
     <!-- 展开指示器 -->
-    <div v-if="hasChildren || skill.stages.length > 0" class="skill-card__expand-indicator">
+    <div
+      v-if="hasChildren || skill.stages.length > 0"
+      class="skill-card__expand-indicator"
+      @click.stop="handleExpandIndicatorClick"
+      role="button"
+      :aria-label="isExpanded ? '收起' : '展开'"
+      tabindex="0"
+      @keydown.enter.stop="handleExpandIndicatorClick"
+    >
       <svg
         class="expand-icon"
         :class="{ 'expand-icon--rotated': isExpanded }"
@@ -178,6 +186,10 @@ function showContextMenu(e: MouseEvent) {
 
 function closeContextMenu() {
   contextMenu.visible = false
+}
+
+function handleExpandIndicatorClick() {
+  emit('toggle-expand', props.skill.id)
 }
 </script>
 
